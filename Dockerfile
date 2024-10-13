@@ -12,7 +12,7 @@ WORKDIR /app
 
 COPY . /app
 
-RUN apt-get install libpq-dev
+RUN sudo apt-get install libpq-dev
 RUN ls
 RUN pip3 install -r requirements.txt
 
