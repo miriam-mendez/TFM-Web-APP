@@ -24,7 +24,7 @@ import calendar
 import datetime
 import plotly.express as px
 from streamlit_tags import st_tags
-from statsmodels.tsa.seasonal import seasonal_decompose
+# from statsmodels.tsa.seasonal import seasonal_decompose
 
 st.set_page_config(
     page_title="BEE Energy",
@@ -206,8 +206,6 @@ with col[0]:
     if time == 'annual':
         number = st.slider("Time in months", 1, 12)
     elif time == 'monthly':
-        print("monthly:")
-        print(df)
         month = df['date'].iloc[0].month
         year = df['date'].iloc[0].year
         num_days = calendar.monthrange(year, month)[1]
@@ -230,9 +228,6 @@ def top5(df):
 
   
 with col[1]:
-    # st.markdown('#### Aggregation by provinces (mean values)')
-    
-    print(df_grouped)
     st.markdown('#### Top 5 - The lowest consumption per capita')
     st.dataframe(top5(df_grouped).head(),
                 column_order=("postalcode","consumption", "rate"),
