@@ -1,6 +1,7 @@
 streamlit==1.38.0
 plotly
 matplotlib
+pip install psycopg2-binary
 psycopg2
 streamlit-tags
 pandas
