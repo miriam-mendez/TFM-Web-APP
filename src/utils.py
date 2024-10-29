@@ -3,6 +3,7 @@ import datetime
 from dateutil.relativedelta import relativedelta
 import pandas as pd
 import psycopg2
+import yaml
 
 START_YEAR = 2021
 
@@ -13,12 +14,15 @@ province_mapping = {
     '4':'Tarragona'
 }
 
+with open('./credentials.yaml', 'r') as f:
+    credentials = yaml.safe_load(f)
+
 conn = psycopg2.connect(
-    dbname='postgres',
-    user='postgres',
-    password='D2st3n1t34n21rth$',
-    host='217.71.195.214',  # e.g., 'localhost'
-    port='5432'   # default is 5432
+    dbname=credentials['dbname'],
+    user=credentials['user'],
+    password=credentials['password'],
+    host=credentials['host'],  # e.g., 'localhost'
+    port=credentials['port']   # default is 5432
 )
 
 def time_granularity(time,table,start_date):
@@ -100,6 +104,3 @@ def make_choropleth(input_df, input_id, geojson_data, input_color_theme):
         height=600
     )
     return choropleth
-
-
-

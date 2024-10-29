@@ -24,7 +24,7 @@ import calendar
 import datetime
 import plotly.express as px
 from streamlit_tags import st_tags
-# from statsmodels.tsa.seasonal import seasonal_decompose
+import yaml
 
 st.set_page_config(
     page_title="BEE Energy",
@@ -34,29 +34,18 @@ st.set_page_config(
 )
 sidebar()
 
+with open('./credentials.yaml', 'r') as f:
+    credentials = yaml.safe_load(f)
 
 conn = psycopg2.connect(
-    dbname='postgres',
-    user='postgres',
-    password='D2st3n1t34n21rth$',
-    host='217.71.195.214',  # e.g., 'localhost'
-    port='5432'   # default is 5432
+    dbname=credentials['dbname'],
+    user=credentials['user'],
+    password=credentials['password'],
+    host=credentials['host'],  # e.g., 'localhost'
+    port=credentials['port']   # default is 5432
 )
 
 START_YEAR = 2021 # Store last 5 years: year - 5[2024,2023,2022,2021,2020]
-
-
-# def fetch_residential_hourly_consumption(minDate,maxDate):
-#     query = f"""
-#         SELECT time, SUM(consumption) AS consumption
-#         FROM residential_consumption_aggregated
-#         WHERE date >= '2023-01-01' date <= '2023-12-31'
-#         GROUP BY time
-#         ORDER BY time;
-#     """
-#     time_series = pd.read_sql_query(query, conn)
-#     return time_series
-
 
 def fetch_time_query(time):
     if time == 'daily':
@@ -94,8 +83,6 @@ province_mapping = {
     '4':'Tarragona'
 }
 with st.sidebar:
-    # st.date_input("Enter :blue[minimum] date for analysis",min_value=datetime.date(2021,9,30),max_value=datetime.date(2024,9,1),value=datetime.date(2023,1,1))
-    # st.date_input("Enter :blue[maximum] date for analysis",min_value=datetime.date(2021,9,30),max_value=datetime.date(2024,9,1),value=datetime.date(2023,12,31))
     with st.expander("Time granularity",expanded=True):
         time = st.selectbox(' ', ['annual','monthly','daily'],label_visibility='collapsed')
         query = fetch_time_query(time) 
@@ -121,7 +108,7 @@ with st.sidebar:
             elif 'month' in df.columns:
                 df_grouped = df.groupby([df['postalcode'].str.slice(0, 1), df['year'], df['month']]).mean(numeric_only=True).reset_index()                
             else:
-                df_grouped = df.groupby([df['postalcode'].str.slice(0, 1), df['time']]).mean().reset_index()        
+                df_grouped = df.groupby([df['postalcode'].str.slice(0, 1), df['time']]).mean(numeric_only=True).reset_index()        
             df_grouped['postalcode'] = df_grouped['postalcode'].replace(province_mapping)
         elif region == 'postal codes':
             geojson_file = './src/data/postalcodes.geojson'
@@ -149,7 +136,8 @@ def make_choropleth(input_df, input_id, geojson_data, input_color_theme='blues')
     choropleth.update_traces(
         hovertemplate='<b>Location: %{text} </b><br>' + 'Value: %{customdata}',
         text = input_df['postalcode'],
-        customdata=input_df[input_id] 
+        customdata=input_df[input_id],
+        name = input_id 
     )
     choropleth.update_layout(
         template='plotly_dark',
@@ -197,15 +185,12 @@ fileter_slide = {
 }
 with col[0]:
     st.markdown('#### Electricity Load Data')
-    # st.dataframe(df)
-    # print(df.dtypes)
-    feature = st.selectbox("Select a feture to analyse", ["consumption","contracts", "consumption/contracts"])
-
-    # feature = st.selectbox("Select a feature to analyse", ['sumEnergy','sumContracts'])
-    
+    feature = st.selectbox("Select a feture to analyse", ["consumption","contracts", "consumption/contracts"])    
     if time == 'annual':
         number = st.slider("Time in months", 1, 12)
     elif time == 'monthly':
+        print("monthly:")
+        print(df)
         month = df['date'].iloc[0].month
         year = df['date'].iloc[0].year
         num_days = calendar.monthrange(year, month)[1]
@@ -227,7 +212,8 @@ def top5(df):
     return result.reset_index().drop(columns=['index'])
 
   
-with col[1]:
+with col[1]:    
+    print(df_grouped)
     st.markdown('#### Top 5 - The lowest consumption per capita')
     st.dataframe(top5(df_grouped).head(),
                 column_order=("postalcode","consumption", "rate"),
@@ -248,7 +234,6 @@ with col[1]:
                     )}
                 )
 
-        # st.altair_chart(make_donut(25, 'Inbound Migration', 'blue'))
     if region == 'postal codes':
         postalcodes = st_tags(
             label=f'Enter {region}:',
@@ -277,38 +262,4 @@ with col[1]:
         'daily':'hourly'
     }
     st.table(df_grouped[(df_grouped['postalcode'].isin(postalcodes)) & (fileter_slide[time](number))])
-    # res = time_series_consumption(df_grouped,time_agg[time],'consumption',postalcodes,time_aggly[time])
-    # st.pyplot(res, use_container_width=True)
-
     st.line_chart(df_grouped[df_grouped['postalcode'].isin(postalcodes)],x=time_agg[time],y=feature,color="postalcode")
-
-
-#########################3333
-
-# st.subheader('Time Series Decomposition')
-# minDate = st.date_input(label='Enter :orange[minimum] date for analysis', value=datetime.date(2021,9,30),
-#                             min_value=datetime.date(2023,1,1),
-#                             max_value=datetime.date(2024,8,31))
-
-# maxDate = st.date_input(label='Enter :orange[maximum] date for analysis', value=datetime.date(2024,8,31),
-#                             min_value=datetime.date(2023,2,2),
-#                             max_value=datetime.date(2024,8,31))
-# if minDate > maxDate:
-#     st.warning('Minimum Date should be earlier than maximum Date')
-    
-# timeSeriesData= fetch_residential_hourly_consumption()
-# timeSeriesData = timeSeriesData.set_index('time')
-# print(timeSeriesData)
-
-# st.write(f'with decomposition model as :blue[additive]')
-# ts_decomposition = seasonal_decompose(timeSeriesData,model='add',period=30)
-# T,S,R = ts_decomposition.trend, ts_decomposition.seasonal, ts_decomposition.resid
-# with st.expander("See the Trend, Seasonality and Residual Plots"):
-#     st.subheader('Trend')
-#     st.line_chart(T)
-#     st.subheader('Seasonality')
-#     st.line_chart(S)
-#     st.subheader('Residual')
-#     st.line_chart(R,width=1)
-
-    

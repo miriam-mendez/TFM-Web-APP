@@ -1,15 +1,13 @@
 import streamlit as st
-from src.ui import sidebar,fetch_time_query
+from src.ui import sidebar
 from src.utils import region_granularity,time_granularity
 from src.plots import * 
-import psycopg2
 import pandas as pd
 import json
 import calendar
 from streamlit_tags import st_tags
 from calendar import month_abbr
 import datetime
-from dateutil.relativedelta import relativedelta
 
 st.set_page_config(
     page_title="BEE Energy",
@@ -27,7 +25,6 @@ time_agg = {
     'daily':'time'
 }
 
-##### (data, prediction)
 tables = {
     'ClimateDT':{
         'annual':('climatedt_monthly','residential_consumption_predicted_climatedt_monthly'),
@@ -88,7 +85,7 @@ with tab1:
             num_days1 = calendar.monthrange(year1, month1)[1]
             number1 = st.slider("Time in days", 1, num_days1)
        
-        choropleth = make_choropleth(df_grouped1[fileter_slide(time,df_grouped1,number1)], feature1, geojson_data1,'blues')
+        choropleth = make_choropleth(df_grouped1[fileter_slide(time,df_grouped1,number1)], 'consumption', geojson_data1,'blues')
         st.plotly_chart(choropleth, use_container_width=True)
 
     with col[1]:
@@ -136,14 +133,14 @@ with tab2:
             geojson_data2 = json.load(f)
         
         if time == 'annual':
-            number2 = st.slider("Time in months", 1, 12,key = 18)
+            number2 = st.slider("Time in months", 1, 12,value=10,key = 18)
         elif time == 'monthly':
             month2 = df2['date'].iloc[0].month
             year2 = df2['date'].iloc[0].year
             num_days2 = calendar.monthrange(year2, month2)[1]
-            number2 = st.slider("Time in days", 1, num_days2,key=19)
-       
-        choropleth = make_choropleth(df_grouped1[fileter_slide(time,df_grouped1,number1)], feature1, geojson_data1,'blues')
+            number2 = st.slider("Time in days", 1, num_days2,value=15,key=19)
+      
+        choropleth = make_choropleth(df_grouped2[fileter_slide(time,df_grouped2,number2)], 'consumption', geojson_data2,'blues')
         st.plotly_chart(choropleth, use_container_width=True)
     
     with col[1]:
@@ -166,48 +163,3 @@ with tab2:
         fig2 = energy_character(df_grouped2,feature2,postalcodes[-1],time_agg[time])
         st.plotly_chart(fig2, theme="streamlit", use_container_width=True)
         st.line_chart(df_grouped2[df_grouped2['postalcode'].isin(postalcodes)].rename(columns={'postalcode':region}),x=time_agg[time],y=feature2,color=region)
-
-    # query = fetch_time_query(time,time_agg[time][3],2)
-    # df = pd.read_sql_query(query, conn)
-    # df_grouped,geojson_file = region_granularity(df,region)
-    # with open(geojson_file, 'r') as f:
-    #     geojson_data = json.load(f)
-        
-#     # col = st.columns((5, 4), gap='small')
-#     # with col[0]:
-#     #     st.markdown('#### Extremes DT Data')
-#     #     feature = st.selectbox("Select a feature to analyse", ['airtemperature', 'dewairtemperature', 'dhi','dni','ghi','relativehumidity', 'windspeed', 'winddirection','sunazimuth', 'sunelevation','surfacepressure','thermalradiation','totalcloudcover'])
-#     #     if time == 'annual':
-#     #         number = st.slider("Time in months", 1, 12)
-#     #     elif time == 'monthly':
-#     #         month = df['date'].iloc[0].month
-#     #         year = df['date'].iloc[0].year
-#     #         num_days = calendar.monthrange(year, month)[1]
-#     #         number = st.slider("Time in days", 1, num_days)
-#     #     else:
-#     #         number = st.slider("Time in hours", 0, 23)
-            
-#     #     print(df_grouped)
-#     #     choropleth = make_choropleth(df_grouped[fileter_slide[time](number)], feature, geojson_data,'blues')
-#     #     st.plotly_chart(choropleth, use_container_width=True)
-
-    # with col[1]:
-    #     if region == 'postal codes':
-    #         postalcodes = st_tags(
-    #             label=f'Enter {region}:',
-    #             text='Press enter to add more',
-    #             value=['08031'],
-    #             maxtags=100,
-    #             key="2")
-    #     if region == 'provinces':
-    #         postalcodes = st.multiselect(
-    #             f'Enter {region}:',
-    #             ["Barcelona", "Lleida", "Girona", "Tarragona"],
-    #             ["Barcelona", "Lleida"],
-    #         )
-    #     if region == 'catalonia':
-    #         postalcodes = ['catalonia']
-        
-    #     fig = energy_character(df_grouped,feature,postalcodes[-1],time_agg[time][0])
-    #     st.plotly_chart(fig, theme="streamlit", use_container_width=True)
-    #     st.line_chart(df_grouped[df_grouped['postal_code'].isin(postalcodes)],x=time_agg[time][0],y=feature,color="postal_code")

@@ -18,7 +18,7 @@ def make_choropleth(input_df, input_id, geojson_data, input_color_theme='blues')
             center={"lat": 41.8, "lon": 1.5}
     )
     choropleth.update_traces(
-        hovertemplate='<b>Location: %{text} </b><br>' + 'Value: %{customdata:.2f}',
+        hovertemplate='<b>Location: %{text} </b><br>' + 'Consumption: %{customdata:.2f}',
         text = input_df['postalcode'],
         customdata=input_df[input_id] 
     )

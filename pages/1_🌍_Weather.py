@@ -10,7 +10,8 @@ from streamlit_tags import st_tags
 import calendar
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
-
+import matplotlib.pyplot as plt
+import yaml
 
 st.set_page_config(
     page_title="BEE Energy",
@@ -20,12 +21,15 @@ st.set_page_config(
 )
 sidebar()
 
+with open('./credentials.yaml', 'r') as f:
+    credentials = yaml.safe_load(f)
+
 conn = psycopg2.connect(
-    dbname='postgres',
-    user='postgres',
-    password='D2st3n1t34n21rth$',
-    host='217.71.195.214',  # e.g., 'localhost'
-    port='5432'   # default is 5432
+    dbname=credentials['dbname'],
+    user=credentials['user'],
+    password=credentials['password'],
+    host=credentials['host'],  # e.g., 'localhost'
+    port=credentials['port']   # default is 5432
 )
 
 START_YEAR = 2021 # Store last 5 years: year - 5[2024,2023,2022,2021,2020]
@@ -36,7 +40,7 @@ def fetch_time_query(time):
         date = date_display(START_YEAR)
         query = f"""
             SELECT e.*, r.consumption 
-            FROM era5 e, residential_consumption r
+            FROM era5land e, residential_consumption r
             WHERE e.postalcode = r.postalcode and e.time = r.time and DATE(e.time) = '{date.strftime('%Y-%m-%d')}'
             ORDER BY time;
         """
@@ -46,7 +50,7 @@ def fetch_time_query(time):
         end_date = start_date + relativedelta(months=1)
         query = f"""
             SELECT e.*,r.consumption
-            FROM era5_daily e, residential_consumption_aggregated r
+            FROM era5land_aggregated e, residential_consumption_aggregated r
             WHERE e.postalcode = r.postalcode and r."date" = e."date" and e.date >= '{start_date.strftime('%Y-%m-%d')}' AND e.date < '{end_date.strftime('%Y-%m-%d')}'
             ORDER BY date;
         """
@@ -54,7 +58,7 @@ def fetch_time_query(time):
         year = year_display(START_YEAR)
         query = f"""
             SELECT e.*, r.consumption
-            FROM era5_monthly e, residential_consumption_monthly r
+            FROM era5land_monthly e, residential_consumption_monthly r
             WHERE e.postalcode = r.postalcode and r.month = e.month and r.year=e.year and e.year = '{year}'
             ORDER BY month;
         """
@@ -103,9 +107,7 @@ with st.sidebar:
         with open(geojson_file, 'r') as f:
             geojson_data = json.load(f)
             
-    # color_theme_list = ['blues', 'cividis', 'greens', 'inferno', 'magma', 'plasma', 'reds', 'rainbow', 'turbo', 'viridis']
-    # selected_color_theme = st.selectbox('Select a color theme', color_theme_list)
-            
+   
 #######################
 # Plots
 def make_choropleth(input_df, input_id, geojson_data, input_color_theme):
@@ -121,7 +123,7 @@ def make_choropleth(input_df, input_id, geojson_data, input_color_theme):
             center={"lat": 41.8, "lon": 1.5}
     )
     choropleth.update_traces(
-        hovertemplate='<b>Location: %{text} </b><br>' + 'Value: %{customdata:.2f}',
+        hovertemplate='<b>Location: %{text} </b><br>' + 'Consumption: %{customdata:.2f}',
         text = input_df['postalcode'],
         customdata=input_df[input_id] 
     )
@@ -210,8 +212,6 @@ fileter_slide = {
 }
 with col[0]:
     st.markdown('#### ERA5 Land Data')
-    # st.dataframe(df)
-    # print(df.dtypes)
     feature = st.selectbox("Select a feature to analyse", ['airtemperature', 'cdd', 'hdd', 'relativehumidity', 'windspeed', 'winddirection', 'ghi', 'dni', 'sunelevation'])
     if time == 'annual':
         number = st.slider("Time in months", 1, 12)
@@ -222,12 +222,10 @@ with col[0]:
         number = st.slider("Time in days", 1, num_days)
     else:
         number = st.slider("Time in hours", 0, 23)
-    choropleth = make_choropleth(df_grouped[fileter_slide[time](number)], feature, geojson_data,'blues')
+    choropleth = make_choropleth(df_grouped[fileter_slide[time](number)], 'consumption', geojson_data,'blues')
     st.plotly_chart(choropleth, use_container_width=True)
 
 with col[1]:
-    # st.markdown('#### Aggregation by provinces (mean values)')
-
     if region == 'postal codes':
         postalcodes = st_tags(
             label=f'Enter {region}:',
@@ -256,17 +254,4 @@ with col[1]:
     }
     fig = energy_character(df_grouped,feature,postalcodes[-1],time_agg[time])
     st.plotly_chart(fig, theme="streamlit", use_container_width=True)
-    # st.table(df_grouped[(df_grouped['postal_code'].isin(postalcodes)) & (fileter_slide[time](number))])
     st.line_chart(df_grouped[df_grouped['postalcode'].isin(postalcodes)],x=time_agg[time],y=feature,color="postalcode")
-    # res = time_series_consumption(df_grouped,time_agg[time],feature,postalcodes, time_aggly[time])
-    # st.pyplot(res, use_container_width=True)
-    
-   
-    
-    
-    # df1 = pd.read_csv('/home/eouser/Documentos/population-dashboard/era5land_provinces_time.csv')
-    # print(df1)
-    # res = time_series_consumption(df1,date,selected_color_theme,postalcodes)
-    # st.pyplot(res, use_container_width=True)
-
-    

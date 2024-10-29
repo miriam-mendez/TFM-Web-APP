@@ -26,7 +26,7 @@ def month_display(start_year):
 
 
 def date_display(start_year):
-    date = st.date_input(" ",min_value=datetime.date(start_year,1,1),max_value=datetime.datetime.now(),label_visibility='hidden')
+    date = st.date_input(" ",min_value=datetime.date(start_year,1,1),max_value=datetime.date(2024,9,30),label_visibility='hidden')
     return date
 
 
